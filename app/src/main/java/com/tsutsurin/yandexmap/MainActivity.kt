@@ -4,14 +4,21 @@ import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.animation.ValueAnimator
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.graphics.PointF
+import android.graphics.drawable.Drawable
 import android.location.Geocoder
 import android.os.Bundle
+import android.util.Log
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import androidx.annotation.CheckResult
+import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
@@ -26,12 +33,6 @@ import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.mapkit.user_location.UserLocationObjectListener
 import com.yandex.mapkit.user_location.UserLocationView
 import com.yandex.runtime.image.ImageProvider
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.onStart
 import java.util.*
 
 
@@ -39,8 +40,8 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
 
     companion object {
         private const val ZOOM = 16f
-        private const val PIN_POSITION_UP = 0
-        private const val PIN_POSITION_DOWN = 1
+        const val PIN_POSITION_UP = 0
+        const val PIN_POSITION_DOWN = 1
         private const val requestPermissionLocation = 1
     }
 
@@ -55,21 +56,24 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
 
     private var pinPosition = PIN_POSITION_DOWN
 
-    private var bottomSheet: BottomSheet? = null
+    private var bottomSheetBehavior: BottomSheetBehavior<*>? = null
+
+    private lateinit var viewModel: MainActivityViewModel
+
+    private var pinActive: Drawable? = null
+
+    private var pinNoActive: Drawable? = null
+
+    private var currentAddress = ""
 
     private val upValueAnimator = ValueAnimator.ofInt(
         defaultPinPadding,
         defaultPinPadding + 100
     ).apply {
-        duration = 50
+        duration = 200
         addUpdateListener { valueAnimator ->
             val view = findViewById<ImageView>(R.id.pin)
-            view.setImageDrawable(
-                ContextCompat.getDrawable(
-                    this@MainActivity,
-                    R.drawable.ic_pin_no_active
-                )
-            )
+            view.setImageDrawable(pinNoActive)
             view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = valueAnimator.animatedValue.toString().toInt()
             }
@@ -80,15 +84,10 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
         defaultPinPadding + 100,
         defaultPinPadding
     ).apply {
-        duration = 50
+        duration = 200
         addUpdateListener { valueAnimator ->
             val view = findViewById<ImageView>(R.id.pin)
-            view.setImageDrawable(
-                ContextCompat.getDrawable(
-                    this@MainActivity,
-                    R.drawable.ic_pin_active
-                )
-            )
+            view.setImageDrawable(pinActive)
             view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
                 bottomMargin = valueAnimator.animatedValue.toString().toInt()
             }
@@ -101,6 +100,7 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
         setContentView(R.layout.activity_main)
 
         checkPermission()
+        viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
     }
 
     override fun onStart() {
@@ -162,34 +162,12 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
         cameraUpdateReason: CameraUpdateReason,
         isFinished: Boolean
     ) {
-        if (isFinished && cameraUpdateReason == CameraUpdateReason.GESTURES) {
-            downValueAnimator.start()
-            pinPosition = PIN_POSITION_DOWN
-            userLocationLayer?.resetAnchor()
-
-            val address = geocoder?.getFromLocation(
-                cameraPosition.target.latitude,
-                cameraPosition.target.longitude,
-                1
-            )
-
-            var stringBuilder = ""
-
-            address?.forEach {
-                stringBuilder =
-                    "${it.countryName}, ${it.subAdminArea}, ${it.thoroughfare}, ${it.featureName}"
-            }
-
-            if (stringBuilder.isNotBlank()) {
-                bottomSheet?.textView?.text = stringBuilder
-                bottomSheet?.show()
-            }
-        } else if (!isFinished && cameraUpdateReason == CameraUpdateReason.GESTURES) {
-            if (pinPosition == PIN_POSITION_DOWN) {
-                upValueAnimator.start()
-                pinPosition = PIN_POSITION_UP
-            }
-        }
+        viewModel.execute(
+            cameraPosition,
+            cameraUpdateReason,
+            isFinished,
+            pinPosition
+        )
     }
 
     private fun checkPermission() {
@@ -203,12 +181,23 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
 
     private fun initMapView() {
         val mapKit = MapKitFactory.getInstance()
+        pinActive = ContextCompat.getDrawable(
+            this@MainActivity,
+            R.drawable.ic_pin_active
+        )
+        pinNoActive = ContextCompat.getDrawable(
+            this@MainActivity,
+            R.drawable.ic_pin_no_active
+        )
         mapView = findViewById(R.id.mapview)
         geocoder = Geocoder(this, Locale("ru", "RU"))
-        bottomSheet = BottomSheet(this)
+        bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.standardBottomSheet)).apply {
+            peekHeight = 0
+        }
+        val textView = findViewById<TextView>(R.id.textView)
         mapView?.let { mapView ->
             mapView.map?.apply {
-                isRotateGesturesEnabled = true
+                isRotateGesturesEnabled = false
                 addCameraListener(this@MainActivity)
                 move(CameraPosition(routeStartLocation, ZOOM, 0.0f, 0.0f))
             }
@@ -222,8 +211,56 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
             }
         }
 
+        bottomSheetBehavior?.addBottomSheetCallback(object :
+            BottomSheetBehavior.BottomSheetCallback() {
+
+            override fun onStateChanged(bottomSheet: View, newState: Int) {
+                Log.i("TAG", newState.toString())
+                when (newState) {
+                    BottomSheetBehavior.STATE_HALF_EXPANDED -> {
+                        textView.text = currentAddress
+                        textView.isVisible = true
+                    }
+                    else -> {}
+                }
+            }
+
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {}
+        })
+
         findViewById<FloatingActionButton>(R.id.floatingButton).setOnClickListener {
             cameraUserPosition()
+        }
+
+        lifecycleScope.launchWhenCreated {
+            viewModel.uiState.collect { state ->
+                userLocationLayer?.resetAnchor()
+                when (state) {
+                    PIN_POSITION_DOWN -> {
+                        downValueAnimator.start()
+                        pinPosition = PIN_POSITION_DOWN
+                        geocoder?.let { viewModel.getAddress(it) }
+                    }
+                    PIN_POSITION_UP -> {
+                        upValueAnimator.start()
+                        pinPosition = PIN_POSITION_UP
+                        bottomSheetBehavior?.apply {
+                            this.state = BottomSheetBehavior.STATE_COLLAPSED
+                            peekHeight = 0
+                        }
+                        textView.isVisible = false
+                    }
+                }
+            }
+        }
+
+        lifecycleScope.launchWhenCreated {
+            viewModel.address.collect { address ->
+                if (address.isNotBlank()) {
+                    bottomSheetBehavior?.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                    currentAddress = address
+                }
+            }
         }
     }
 
@@ -239,45 +276,4 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
             }
         }
     }
-
-//    @ExperimentalCoroutinesApi
-//    @CheckResult
-//    fun Map.add(): Flow<Unit> {
-//        return callbackFlow<Unit> {
-//            delay(1000)
-//            val listener = CameraListener { _, cameraPosition, cameraUpdateReason, isFinished ->
-//                if (isFinished && cameraUpdateReason == CameraUpdateReason.GESTURES) {
-//                    downValueAnimator.start()
-//                    pinPosition = PIN_POSITION_DOWN
-//                    userLocationLayer?.resetAnchor()
-//
-//                    val address = geocoder?.getFromLocation(
-//                        cameraPosition.target.latitude,
-//                        cameraPosition.target.longitude,
-//                        1
-//                    )
-//
-//                    var stringBuilder = ""
-//
-//                    address?.forEach {
-//                        stringBuilder =
-//                            "${it.countryName}, ${it.subAdminArea}, ${it.thoroughfare}, ${it.featureName}"
-//                    }
-//
-//                    if (stringBuilder.isNotBlank()) {
-//                        bottomSheet?.textView?.text = stringBuilder
-//                        bottomSheet?.show()
-//                    }
-//                } else if (!isFinished && cameraUpdateReason == CameraUpdateReason.GESTURES) {
-//                    if (pinPosition == PIN_POSITION_DOWN) {
-//                        upValueAnimator.start()
-//                        pinPosition = PIN_POSITION_UP
-//                    }
-//                }
-//            }
-//
-//            addCameraListener(listener)
-//            awaitClose { removeCameraListener(listener) }
-//        }.onStart { emit(Unit) }
-//    }
 }
