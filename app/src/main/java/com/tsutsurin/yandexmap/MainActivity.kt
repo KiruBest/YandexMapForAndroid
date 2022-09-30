@@ -66,6 +66,8 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
 
     private var currentAddress = ""
 
+    private var textView: TextView? = null
+
     private val upValueAnimator = ValueAnimator.ofInt(
         defaultPinPadding,
         defaultPinPadding + 100
@@ -191,10 +193,11 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
         )
         mapView = findViewById(R.id.mapview)
         geocoder = Geocoder(this, Locale("ru", "RU"))
-        bottomSheetBehavior = BottomSheetBehavior.from(findViewById(R.id.standardBottomSheet)).apply {
-            peekHeight = 0
-        }
-        val textView = findViewById<TextView>(R.id.textView)
+        bottomSheetBehavior =
+            BottomSheetBehavior.from(findViewById(R.id.standardBottomSheet)).apply {
+                state = BottomSheetBehavior.STATE_HIDDEN
+            }
+        textView = findViewById(R.id.textView)
         mapView?.let { mapView ->
             mapView.map?.apply {
                 isRotateGesturesEnabled = false
@@ -210,23 +213,6 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
                 setObjectListener(this@MainActivity)
             }
         }
-
-        bottomSheetBehavior?.addBottomSheetCallback(object :
-            BottomSheetBehavior.BottomSheetCallback() {
-
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-                Log.i("TAG", newState.toString())
-                when (newState) {
-                    BottomSheetBehavior.STATE_HALF_EXPANDED -> {
-                        textView.text = currentAddress
-                        textView.isVisible = true
-                    }
-                    else -> {}
-                }
-            }
-
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {}
-        })
 
         findViewById<FloatingActionButton>(R.id.floatingButton).setOnClickListener {
             cameraUserPosition()
@@ -245,20 +231,23 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
                         upValueAnimator.start()
                         pinPosition = PIN_POSITION_UP
                         bottomSheetBehavior?.apply {
-                            this.state = BottomSheetBehavior.STATE_COLLAPSED
-                            peekHeight = 0
+                            this.state = BottomSheetBehavior.STATE_HIDDEN
                         }
-                        textView.isVisible = false
+                        textView?.isVisible = false
                     }
                 }
             }
         }
 
         lifecycleScope.launchWhenCreated {
-            viewModel.address.collect { address ->
-                if (address.isNotBlank()) {
-                    bottomSheetBehavior?.state = BottomSheetBehavior.STATE_HALF_EXPANDED
-                    currentAddress = address
+            viewModel.address.collect {
+                it?.let { address->
+                    if (pinPosition != PIN_POSITION_UP) {
+                        textView?.text =
+                            "${address.countryName}, ${address.subAdminArea}, ${address.thoroughfare}, ${address.featureName}"
+                        textView?.isVisible = true
+                        bottomSheetBehavior?.state = BottomSheetBehavior.STATE_COLLAPSED
+                    }
                 }
             }
         }

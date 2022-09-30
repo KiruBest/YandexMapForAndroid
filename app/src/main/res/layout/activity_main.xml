@@ -5,6 +5,23 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/floatingButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:src="@drawable/ic_arrow"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="1.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="1.0"
+        app:layout_anchor="@id/standardBottomSheet"
+        app:layout_anchorGravity="top|end"
+        tools:ignore="ContentDescription" />
+
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">
@@ -13,21 +30,6 @@
             android:id="@+id/mapview"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-
-        <com.google.android.material.floatingactionbutton.FloatingActionButton
-            android:id="@+id/floatingButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_marginBottom="8dp"
-            android:src="@drawable/arrow"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="1.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_bias="1.0"
-            tools:ignore="ContentDescription" />
 
         <ImageView
             android:id="@+id/pin"
@@ -48,7 +50,19 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@color/white"
+        app:behavior_hideable="true"
+        app:behavior_peekHeight="160dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="start"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="20dp"
+            android:textColor="#002855"
+            android:text="Уточнение адреса"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
 
         <TextView
             android:id="@+id/textView"
@@ -56,7 +70,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:minHeight="64dp"
-            android:textColor="@color/purple_500"
+            android:textColor="@color/black"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
 
     </FrameLayout>

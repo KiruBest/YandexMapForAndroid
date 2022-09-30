@@ -1,5 +1,6 @@
 package com.tsutsurin.yandexmap
 
+import android.location.Address
 import android.location.Geocoder
 import android.util.Log
 import androidx.lifecycle.ViewModel
@@ -12,13 +13,14 @@ import com.yandex.mapkit.map.Map
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.*
 
 class MainActivityViewModel : ViewModel() {
 
     private val _uiState = MutableStateFlow(PIN_POSITION_DOWN)
     val uiState = _uiState.asStateFlow()
 
-    private val _address = MutableStateFlow("")
+    private val _address: MutableStateFlow<Address?> = MutableStateFlow(null)
     val address = _address.asStateFlow()
 
     private var lastCameraPosition: CameraPosition? = null
@@ -36,10 +38,10 @@ class MainActivityViewModel : ViewModel() {
                 cancel()
             }
             Log.i("TAG", cameraUpdateReason.name)
-            if (isFinished && cameraUpdateReason == CameraUpdateReason.GESTURES) {
+            if (isFinished) {
                 lastCameraPosition = cameraPosition
                 _uiState.emit(PIN_POSITION_DOWN)
-            } else if (!isFinished && cameraUpdateReason == CameraUpdateReason.GESTURES) {
+            } else {
                 if (pinPosition == PIN_POSITION_DOWN) {
                     _uiState.emit(PIN_POSITION_UP)
                 }
@@ -56,14 +58,9 @@ class MainActivityViewModel : ViewModel() {
                     1
                 )
 
-                var stringBuilder = ""
-
-                address?.forEach {
-                    stringBuilder =
-                        "${it.countryName}, ${it.subAdminArea}, ${it.thoroughfare}, ${it.featureName}"
+                if (address.isNotEmpty()) {
+                    _address.emit(address[0])
                 }
-
-                _address.emit(stringBuilder)
             }
         }
     }
