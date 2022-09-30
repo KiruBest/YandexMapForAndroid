@@ -7,8 +7,6 @@ import android.graphics.PointF
 import android.graphics.drawable.Drawable
 import android.location.Geocoder
 import android.os.Bundle
-import android.util.Log
-import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
@@ -63,8 +61,6 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
     private var pinActive: Drawable? = null
 
     private var pinNoActive: Drawable? = null
-
-    private var currentAddress = ""
 
     private var textView: TextView? = null
 
