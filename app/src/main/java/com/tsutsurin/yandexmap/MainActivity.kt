@@ -38,6 +38,7 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
 
     companion object {
         private const val ZOOM = 16f
+        private const val ANIMATION_DURATION: Long = 200
         const val PIN_POSITION_UP = 0
         const val PIN_POSITION_DOWN = 1
         private const val requestPermissionLocation = 1
@@ -68,7 +69,7 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
         defaultPinPadding,
         defaultPinPadding + 100
     ).apply {
-        duration = 200
+        duration = ANIMATION_DURATION
         addUpdateListener { valueAnimator ->
             val view = findViewById<ImageView>(R.id.pin)
             view.setImageDrawable(pinNoActive)
@@ -82,7 +83,7 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
         defaultPinPadding + 100,
         defaultPinPadding
     ).apply {
-        duration = 200
+        duration = ANIMATION_DURATION
         addUpdateListener { valueAnimator ->
             val view = findViewById<ImageView>(R.id.pin)
             view.setImageDrawable(pinActive)
@@ -146,8 +147,6 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
         userLocationView.pin.setIcon(
             ImageProvider.fromResource(this, R.drawable.ic_arrow)
         )
-
-        cameraUserPosition()
     }
 
     override fun onObjectRemoved(userLocationView: UserLocationView) {}
@@ -193,7 +192,7 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
             BottomSheetBehavior.from(findViewById(R.id.standardBottomSheet)).apply {
                 state = BottomSheetBehavior.STATE_HIDDEN
             }
-        textView = findViewById(R.id.textView)
+        textView = findViewById(R.id.tvCurrentAddress)
         mapView?.let { mapView ->
             mapView.map?.apply {
                 isRotateGesturesEnabled = false
@@ -216,7 +215,9 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
 
         lifecycleScope.launchWhenCreated {
             viewModel.uiState.collect { state ->
-                userLocationLayer?.resetAnchor()
+                userLocationLayer?.apply {
+                    if (isAnchorEnabled) resetAnchor()
+                }
                 when (state) {
                     PIN_POSITION_DOWN -> {
                         downValueAnimator.start()
@@ -237,7 +238,7 @@ class MainActivity : AppCompatActivity(), UserLocationObjectListener, CameraList
 
         lifecycleScope.launchWhenCreated {
             viewModel.address.collect {
-                it?.let { address->
+                it?.let { address ->
                     if (pinPosition != PIN_POSITION_UP) {
                         textView?.text =
                             "${address.countryName}, ${address.subAdminArea}, ${address.thoroughfare}, ${address.featureName}"

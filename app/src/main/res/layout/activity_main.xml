@@ -12,12 +12,6 @@
         android:layout_marginEnd="8dp"
         android:layout_marginBottom="8dp"
         android:src="@drawable/ic_arrow"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="1.0"
         app:layout_anchor="@id/standardBottomSheet"
         app:layout_anchorGravity="top|end"
         tools:ignore="ContentDescription" />
@@ -45,34 +39,42 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <FrameLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/standardBottomSheet"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:background="@color/white"
         app:behavior_hideable="true"
-        app:behavior_peekHeight="160dp"
+        app:behavior_peekHeight="200dp"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
         <TextView
+            android:id="@+id/tvSpecifyAddress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="start"
             android:layout_marginStart="16dp"
             android:layout_marginTop="20dp"
-            android:textColor="#002855"
+            android:layout_marginEnd="16dp"
+            android:gravity="start"
             android:text="Уточнение адреса"
-            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:textColor="#002855"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
-            android:id="@+id/textView"
+            android:id="@+id/tvCurrentAddress"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:minHeight="64dp"
+            android:layout_marginVertical="16dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="16dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
             android:textColor="@color/black"
-            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvSpecifyAddress"
+            app:layout_constraintVertical_bias="0.0" />
 
-    </FrameLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

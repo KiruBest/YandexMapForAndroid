@@ -9,11 +9,12 @@ import com.tsutsurin.yandexmap.MainActivity.Companion.PIN_POSITION_DOWN
 import com.tsutsurin.yandexmap.MainActivity.Companion.PIN_POSITION_UP
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.CameraUpdateReason
-import com.yandex.mapkit.map.Map
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.*
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 class MainActivityViewModel : ViewModel() {
 
